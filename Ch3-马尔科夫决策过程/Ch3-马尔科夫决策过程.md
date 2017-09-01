@@ -154,10 +154,10 @@ $$
 $$
 若能量水平为高，则一段搜寻总能在不耗尽电量情况下完成；高能开始的搜寻后，电量以$\alpha$的概率为高，以$1-\alpha$的概率减为低。另一方面，低能开始的搜寻后，电量以$\beta$的概率为低，以$1-\beta$的概率耗尽。耗尽后，机器人被重用，电量充回高。每个收集的金属罐激励计为+1，每次重用的激励计为-3，记$r_{\text{search}}$和$r_{\text{wait}}$($r_{\text{search}}>r_{\text{wait}}$)分别为搜寻和等待时金属罐的期望数，且假设回去充电途中不会收集金属罐。这样这个系统就是一个有限MDP，其转移矩阵和期望激励为：
 
-<img src="note3_pics/transition.png" width="750" text-align="middle" />
+<img src="note3_pics/transition.png" width="750" text-align="middle" >
 
 *转移图*便于总结有限MDP动态，图3.3为回收机器人的转移图，有状态和行为两种节点。每个状态有一个状态节点（大圆圈），每个状态-行为对由一个行为节点（小圆点）。从$s$开始采取行为$a$，到达行为节点$(s,a)$，每个箭头对应一个三元组$(s,s',a)$，标记箭头转移概率$p(s'|s,a)$，转移激励期望$r(s,a,s')$。
 
-<img src="note3_pics/transition_graph.png" width="600px" text-align="middle" />
+<img src="note3_pics/transition_graph.png" width="600px" text-align="middle" >
 
 **练习3.10**：给出与3.1类似的表，除了$p(s',r|s,a)$，它应该有$s,a,s',r$列和$p(s',r|s,a)$，以及每个$p(s',r|s,a)>0$的四元组一行。
