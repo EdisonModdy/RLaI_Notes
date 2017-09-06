@@ -18,6 +18,8 @@ q_*(s,a)
 $$
 对任意$s \in \mathcal S, a \in \mathcal A(s)$和$s' \in S^+$。DP算法通过将贝尔曼方程转化为赋值，也就是改善期望价值函数近似的更新规则来获得。
 
+
+
 ##### 4.1 策略评估
 
 首先考虑如何计算任意策略$\pi$的状态-价值函数$v_\pi$，这在DP中称为**策略评估(policy evaluation)**。这里也称为**预测问题**。对任意$s \in \mathcal S$：
@@ -45,12 +47,26 @@ $$
 要实现迭代策略评估的计算机程序，可以使用两个数组分别存储$v_k(s)$和$v_{k+1}(s)$。但更简单的是用一个数组并在“就地”更新旧值，也就是每个新的备份值立即覆盖旧值，然后依赖于状态备份的顺序，有时新值会代替旧值在(4.5)右侧使用。这种算法也收敛到$v_\pi$，事实上速度更快，因其获得新值后便立即使用。对就地算法而言，状态备份的顺序对收敛速度影响显著，在提到DP算法时记住通常是就地算法。
 
 另一个实现点与算法的终止有关。正式情况下，迭代策略评估算法仅在极限情况下(in the limit)收敛，但实际中必须短于此停止。通常的停机条件是在每步迭代后测试$\max_{s\in\mathcal S}\left\vert v_{k+1}(s)-v_k(s) \right\vert$，当充分小的时候停止。下面展示了带停机标准的完整算法：
-
-<img src="note4_pics/Iter-Policy-Eval.png" width="500px" text-align="middle">
-
+$$
+\bbox[25px,border:2px solid]
+{
+\begin{aligned}
+&\text{Input }\pi,\text{ the policy to be evaluated}\\
+&\text{Initialize an array }V(s)=0,\text{ for all }s\in\mathcal S^+\\
+&\text{Repeat}\\
+&\qquad\Delta \leftarrow 0\\
+&\qquad\text{For each }s\in\mathcal S:\\
+&\qquad\qquad v \leftarrow V(s)\\
+&\qquad\qquad V(s)\leftarrow\sum_a\pi(a\mid s)\sum_{s',r}p(s',r\mid s,a)\left[ r+\gamma V(s') \right]\\
+&\qquad\qquad\Delta\leftarrow\max(\Delta,\left\vert v-V(s) \right\vert)\\
+&\text{until }\Delta < \theta\text{ (a small positive number) }\\
+&\text{Output }V\approx v_\pi
+\end{aligned}
+}
+$$
 **示例4.1**：考虑下面展示的$4\times 4$网格世界，
 
-<img src="note4_pics/Grid-World.png" width="600px" text-align="middle" />
+<img src="note4_pics/Grid-World.png" width="500px" text-align="middle" />
 
 非终止状态是$\mathcal S=\{1,2,\dots,14\}$，每个状态有4种行为$\mathcal A=\{\mathtt{up, down, right, left}\}$，也确定了相应的状态转移，除了使代理离开网格实际保持不变的行为。这是一个无折扣分节任务，所有转移的激励是-1直到到达终止状态。终止状态是图中阴影部分（尽管展示了两个地方但形式上是一个状态）。图4.1左侧展示了由迭代策略评估计算的价值函数序列$\{v_k\}$。最终评估实际是$v_\pi$，这种情况下给每个状态从次开始到终结的期望步数的负数。
 
@@ -61,3 +77,117 @@ $$
 **练习4.2**：示例4.1中，若在状态13的正下方加入状态15，其行为$\mathtt{left, up, right, down}$分别转移到12，13，14和15。假定从原状态的转移不变，则等概率随机策略的$v_\pi(15)$是什么？若状态13的动态也发生变化，其行为$\mathtt{down}$将其带到新状态15，则这种情况下等概率随机策略的$v_\pi(15)$是什么？
 
 **练习4.3**：行为价值函数$q_\pi$类似于(4.3)、(4.4)和(4.5)的等式，和其函数序列$q_0,q_1,q_2,\dots$的连续近似分别是什么？
+
+
+
+##### 4.2 策略改善
+
+假定已确定任一策略$\pi$的价值函数，对某个状态$s$要知道是否需改变策略选择一个行为$a \neq \pi(s)$。已经知道从状态$s$遵循当前策略的好坏—就是$\pi(s)$，但转到新策略会变得如何呢？一种方法是考虑在$s$选择$a$，此后遵循已有的策略$\pi$。这种方法的价值是：
+$$
+\begin{eqnarray*}
+q_\pi(s,a)
+&=& \mathbb E_\pi \left[ R_{t+1} + \gamma v_\pi(S_{t+1}) \middle | S_t=s, A_t=a \right] \\
+&=& \sum_{s',r} p(s',r \mid s,a) \left[ r + \gamma v_\pi(s') \right] \tag{4.6}
+\end{eqnarray*}
+$$
+关键标准是看这个值与$\pi(s)$的大小。若有一次在$s$选择$a$然后遵循$\pi$比始终遵循$\pi$更好（这里的有一次不是试了很多次中的一次），则能够期待每次遇到$s$时选择$a$会更好，因此这个新的策略事实上就是一个更好的。
+
+这是更一般的称为**策略改善理论**的一个特殊情况。令$\pi$和$\pi'$为任意策略对，若$\forall s \in \mathcal S$：
+$$
+q_\pi(s, \pi'(s)) \ge v_\pi(s) \tag{4.7}
+$$
+则策略$\pi'$必然与策略$\pi$同样或更好，也就是说$\pi'$必然从$\forall s \in \mathcal S$获得更多或相等的期望回报：
+$$
+v_\pi'(s) \ge v_\pi(s) \tag{4.8}
+$$
+若对任意状态(4.7)都是严格不等式，则(4.8)中至少有一个状态是严格的。这个结果尤其适用于考虑一个改变的策略$\pi'$与一个原始策略$\pi$除$\pi'(s)=a\neq\pi(s)$都是等价的，则(4.7)在除$s$外的所有状态都成立，因此若$q_\pi(s,a)>\pi(s)$，则改变的策略是比$\pi$更好的策略。
+
+证明策略改善理论背后的思想很简单，从(4.7)开始持续展开$q_\pi$侧并反复应用(4.7)直到获得$v_{\pi'}(s)$：
+$$
+\begin{eqnarray*}
+v_\pi(s)
+&\le& q_{\pi'}(s, \pi'(s)) \\
+&=&  \mathbb E_{\pi'} \left[ R_{t+1} +\gamma v_\pi(S_{t+1}) \middle | S_t=s \right] \\
+&\le& \mathbb E_{\pi'} \left[ R_{t+1} +\gamma q_\pi(S_{t+1}, \pi'(S_{t+1})) \middle | S_t=s \right] \\
+&=& \mathbb E_{\pi'} \left[ R_{t+1} +\gamma \mathbb E_{\pi'}(R_{t+2}+\gamma v_\pi(S_{t+2})) \middle | S_t=s \right] \\
+&=& \mathbb E_{\pi'} \left[ R_{t+1} + \gamma R_{t+2}+\gamma^2 v_\pi(S_{t+2}) \middle | S_t=s \right] \\
+&\le& \mathbb E_{\pi'} \left[ R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \gamma^3v_\pi(S_{t+3}) \middle | S_t=s \right] \\
+&\vdots& \\
+&\le& \mathbb E_{\pi'} \left[ R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \gamma^3R_{t+4} + \cdots \middle | S_t=s \right] \\
+&=& v_{\pi'}(s)
+\end{eqnarray*}
+$$
+目前已看到给定策略及其价值函数，如何评估此策略下在单个状态到一个特定行为的改变。很自然地想到考虑在所有状态到所有可能行为的改变，在每个状态选择表现出最好$q_\pi(s,a)$的行为。换句话说，考虑如下新的**贪心**策略：
+$$
+\begin{eqnarray*}
+\pi'(s)
+&\dot=&  \arg\max_a q_\pi(s,a)\\
+&=& \arg\max_a \mathbb E\left[ R_{t+1} + \gamma v_\pi(S_{t+1}) \middle | S_t=s, A_t=a \right]\tag{4.9}\\
+&=& \arg\max_a \sum_{s',r} p(s',r\mid s,a)\left[ r+\gamma v_\pi(s') \right]
+\end{eqnarray*}
+$$
+贪心策略选择基于$v_\pi$短期的最优行为。由其构造，贪心策略满足策略改善理论的条件，因此与原策略相比他一样活着更加好。这样通过贪心选择原策略价值函数来产生新策略以改善原策略过程称为**策略改善**。
+
+假定新的贪心策略$\pi'$，一样好、但不优于旧策略$\pi$，则$v_\pi = v_{\pi'}$。由(4.9)，它满足$\forall s \in \mathcal S$：
+$$
+\begin{eqnarray*}
+v_{\pi'}(s)
+&=& \max_a \mathbb E\left[ R_{t+1} + \gamma v_{\pi'}(S_{t+1}) \middle | S_t=s, A_t=a \right]\\
+&=& \max_a \sum_{s',r} p(s',r\mid s,a) \left[ r+\gamma v_{\pi'}(s') \right]
+\end{eqnarray*}
+$$
+这与贝尔曼最优性方程相同，因此$v_{\pi'}$必然是$v_*$，而$\pi$和$\pi'$都是最优策略。策略改善必然给出严格更优的策略除非原策略已是最优。
+
+目前这节内容已经考虑了策略的特殊情况，更一般的案例中，一个随机策略$\pi$确定在每种状态下采取没中行为的概率$\pi(a\mid s)$，这一节所有的内容都能很简单地扩展到随机策略。尤其是策略改善理论像陈述地那样在随机情况中贯彻。另外，如果在策略改善步骤出现平局—即有多个行为取得了最大值—则在随机过程中不必从中挑选一个，而是每个最大的行为都赋予被新贪心策略选中的概率的一部分。任何分配计划都可以，只要所有次优行为都赋予0概率。
+
+图4.1的最后一行展示了改善随机策略的一个示例。原策略$\pi$是等概率随机的，新策略$\pi'$，则是关于$v_\pi$贪心的，价值函数$v_\pi$展示在底部左侧图表中，可能的策略$\pi'$集在底部右侧图表。任何这样策略$v_{\pi'}(s)$的价值函数通过检查可看到所有状态$s \in \mathcal S$可能是-1，-2或-3，而$v_\pi(s)$最大是-14。因此$v_{\pi'}(s) \ge v_\pi(s),\quad\forall s\in\mathcal S$，展示了策略改善。尽管在这个示例中新的策略$\pi'$是最优，但通常仅能保证一步改进。
+
+
+
+##### 4.3 策略迭代
+
+一旦某个策略$\pi$用$v_\pi$改善产生更好的策略后，则能计算$v_{\pi'}$然后又产生更好的$\pi''$，因此就能获得一序列单调递增改进的策略和价值函数。
+$$
+\begin{CD}
+\pi_0 @>E>> v_{\pi_0} @>I>> \pi_1 @>E>> v_{\pi_1} @>I>> \pi_2 @>E>> \cdots @>I>> \pi_* @>E>> v_*
+\end{CD}
+$$
+
+其中$\begin{CD} @>E>> \end{CD}$表示策略评估，$\begin{CD} @>I>> \end{CD}$表示策略改善。每个策略都保证为前一个的严格改善（除非已是最优）。因有限MDP仅有有限的策略，这个过程必然会在有限次迭代后收敛到最优策略和最优价值函数。这种寻找最优策略的方法称为**策略迭代**，完整的算法在如下面所示（注意它有一个细小的缺陷，就是可能会在两个或多个同样好的策略中切换而永不终止，可通过增加额外的flag修正）。注意每个策略评估本身也是迭代计算，从前一个策略的价值函数开始。这通常能带来策略评估收敛速度的巨大提升（大概是因为价值函数从一个策略到下一个改变很小）。
+$$
+\bbox[25px,border:2px solid]
+{
+\begin{aligned}
+1.&\text{Initialization}\\
+&V(s) \in \mathbb R\text{ and }\pi(s) \in \mathcal A(s)\text{ arbitrary for all }s\in \mathcal S\\
+\\
+2.&\text{Policy Evaluation}\\
+&\text{Repeat}\\
+&\qquad\Delta \leftarrow 0\\
+&\qquad\text{For each }s \in \mathcal S:\\
+&\qquad\qquad v\leftarrow V(s)\\
+&\qquad\qquad V(s) \leftarrow \sum_{s',r}p(s',r\mid s,\pi(s))\left[ r+\gamma V(s') \right]\\
+&\qquad\qquad \Delta\leftarrow \max(\Delta,\left\vert v-V(s) \right\vert)\\
+&\text{until }\Delta<\theta\text{ (a small positive number) }\\
+\\
+3.&\text{Policy Improvement}\\
+&policy\text-stable \leftarrow true\\
+&\text{For each }s\in\mathcal S:\\
+&\qquad old\text-action \leftarrow \pi(s)\\
+&\qquad \pi(s) \leftarrow \arg\max_{a} \sum_{s',r} p(s',r\mid s,a)\left[ r+\gamma V(s') \right]\\
+&\qquad \text{If } old\text-action\neq\pi(s),\text{ then }policy\text-stable \leftarrow false\\
+&\text{If }policy\text-stable,\text{ then stop and return }V\approx v_*\text{ and }\pi\approx\pi_*;\text{else go to 2}
+\end{aligned}
+}
+$$
+策略迭代通常以令人惊异的速度收敛，如图4.1的例子展示的那样。策略改善了理论保证了这些策略优于原始的随机策略。在这种情形中，这些策略不仅是更优，而是最优，以最小的步数进展到了终止状态。在这个示例中，策略迭代仅在一步之后就找到了最优策略。
+
+**示例4.2 Jack的汽车租赁**：Jack管理一家全国范围汽车租赁公司的两个地点。每天一些顾客到每个地点租车。如果Jack有车则租出去然后通过全国公司记入\$10的贷方。若在那个地点没车，则错失这笔生意。车在被归还的后一天才能被出租。为确保车在需要的时候能获得，Jack可以在一夜之间将车在两个地点间移动，每辆车移动的代价为\$2。假定每个地点车辆的需求和归还数是泊松随机变量(Poisson random variables)，也就是数目为$n$的概率为$\frac{\lambda^n}{n!}e^{-\lambda}$，其中$\lambda$为期望数目。假定第一个地点租赁和归还的$\lambda$都是3，第二个地点租赁的$\lambda$为4，归还为2。假定每个地点不超过20辆车，一个晚上能从一个地点移动的车不超过5辆。取折扣率为$\gamma=0.9$并将此问题建立为连续有限MDP，时间步是天，状态是每个地点当天结束时的车辆数，行为是一晚在两地点间移动车辆的净数目。图4.2展示了策略迭代从永不移动车辆的策略开始找到的策略序列。
+
+<img src="note4_pics/Car-Rent.png" width="900px" text-align="middle" />
+
+**练习4.4（编程）**：写一个策略迭代的程序并按照以下变化重新解决Jack的汽车租赁问题。Jack第一个地点的一个员工每晚乘公交回第二个地点附近的家，很乐意免费将车开到第二个地点。此方向额外的车和另一个方向所有车的移动的花销依然是\$2。另外，Jack在每个地点的车位有限，若一个地点一晚停有超过10辆车（在车的任何移动后），则需额外的\$4来使用第二个停车场（无论在那停几辆车）。这些非线性和任意动态经常在实际问题中出现，无法用动态规划以外的最优化方法来解决。为检查程序，先复现原始问题给出的结果。
+
+**练习4.5**：如何定义行为价值的策略迭代？给出完整的与$v_*$类似的计算$q_*$的算法。要特别重视这个练习，因其包含的思想在本书其余部分都会用到。
+
+**练习4.6**：假定仅考虑$\epsilon\text-soft$的策略，即在每个状态$s$选择每个行为的概率至少是$\epsilon/\left\vert\mathcal A(s)\right\vert$。以3、2、1的顺序，量化地描述$v_*$的策略迭代算法每一步相应的变化。
