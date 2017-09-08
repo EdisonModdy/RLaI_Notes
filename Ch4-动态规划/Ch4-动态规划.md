@@ -191,3 +191,37 @@ $$
 **练习4.5**：如何定义行为价值的策略迭代？给出完整的与$v_*$类似的计算$q_*$的算法。要特别重视这个练习，因其包含的思想在本书其余部分都会用到。
 
 **练习4.6**：假定仅考虑$\epsilon\text-soft$的策略，即在每个状态$s$选择每个行为的概率至少是$\epsilon/\left\vert\mathcal A(s)\right\vert$。以3、2、1的顺序，量化地描述$v_*$的策略迭代算法每一步相应的变化。
+
+
+
+##### 4.4 价值迭代
+
+策略迭代的一个缺陷是它本身包含策略评估—本身也可能是一个耗时的迭代计算。若迭代地完成策略评估，确切到$v_\pi$的收敛仅在极限时发生。事实上策略迭代的策略评估可以在不损失策略迭代收敛的保证下通过几种方法缩短。其中一个重要的特例是仅一步清扫后就停止策略评估。这种算法称为**价值迭代**，能够写为结合策略改善和缩短策略评估步骤的简单备份操作：
+$$
+\begin{eqnarray*}
+v_{k+1}(s) 
+&=& \max_a \mathbb E\left[ R_{t+1} + \gamma v_k(S_{t+1}) \mid S_t=s, A_t=a \right]\\
+&=& \max_a \sum_{s', r} p(s',r\mid s,a)\left[ r+\gamma v_k(s') \right]
+\end{eqnarray*}
+$$
+对$\forall s \in \mathcal S$。对任意$v_0$，序列$\{v_k\}$在保证$v_*$存在同样的条件下收敛到$v_*$。另一种理解价值迭代的方法是参考贝尔曼最优性方程(4.1)。注意价值迭代策略仅是将贝尔曼最优性方程转换为更新规则而得，同样注意价值迭代备份是如何与策略评估备份(4.5)等价的，除了它需从所有行为中采取最大值。也可以通过比较这些算法的备份图来理解这种紧密关系：图3.7左边展示了策略评估的备份图，而图3.7左侧展示了价值迭代的备份图。这两个是计算$v_\pi$和$v_*$的自然备份操作。
+
+最后考虑价值迭代如何终止。与策略评估类似，价值迭代形式上要求无限次的迭代来恰好收敛到$v_*$。实际上一旦价值函数在一次清扫中仅改变很小的量时就停机。价值迭代有效地结合了策略评估的一次清扫和策略改善的每一次清扫。通常，整个缩短的策略迭代算法类可以认为是一系列清扫。其中一些使用策略评估备份，一些则使用价值迭代备份。因为(4.10)中的最大化操作是这些备份间仅有的差异，这就意味着最大操作附加到了策略评估的的清扫。所有这些算法收敛到折扣有限MDP的最优策略。
+$$
+\bbox[25px,border:2px solid]
+{\begin{aligned}
+&\text{Initialize array }V\text{ arbitrarily}\\
+\\
+&\text{Repeat}\\
+&\qquad \Delta \leftarrow 0\\
+&\qquad\text{For each }s \in \mathcal S:\\
+&\qquad\qquad v \leftarrow V(s)\\
+&\qquad\qquad V(s) \leftarrow \max_a\sum_{s',r}p(s',r\mid s,a)\left[ r+\gamma V(s') \right]\\
+&\qquad\qquad \Delta \leftarrow \max(\Delta, \left\vert v-V(s) \right\vert)\\
+&\text{until }\Delta < \theta\text{ (a small positive number)}\\
+&\\
+&\text{Output a deterministic policy, }\pi \approx\pi_*,\text{ such that}\\
+&\qquad\pi(s) = \arg\max_a \sum_{s',r} p(s',r\mid s,a)\left[ r + \gamma V(s') \right]
+\end{aligned}}
+$$
+**示例4.3 赌徒难题**

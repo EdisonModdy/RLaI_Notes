@@ -1,4 +1,4 @@
-##### 复习与回顾
+#### 复习与回顾
 
 $t$时刻的**回报的定义**：
 $$
@@ -14,9 +14,9 @@ P(S_{t+1},R_{t+1}|S_0,A_0,R_1,S_1,A_1,\dots,R_t,S_t,A_t) = P(S_{t+1}, R_{t+1} \m
 $$
 **马尔科夫决策过程**：
 
-- 满足马尔科夫特性的强化学习任务；状态和空间都有限，为有限MDP；
+- 满足马尔科夫特性的强化学习任务；若状态和空间都有限，为有限MDP；
 
-- $p(s',r\mid s,a)$可完全指定一个有限MDP动态，计算有关环境任何内容；
+- $p(s',r\mid s,a)$可完全指定一个有限MDP动态，计算有关环境的任何内容；
 
 - **状态-行为的期望激励**：
   $$
@@ -29,6 +29,8 @@ $$
   $$
   p(s'|s,a) \dot= \text{Pr}\left\{ S_{t+1}=s' | S_t=s, A_t=a \right\} = \sum_{r \in \mathcal R} p(s',r|s,a)
   $$
+
+
 
 
 ##### 价值函数(value function)：
@@ -49,10 +51,35 @@ $$
   $$
 
 - **$q_\pi$的贝尔曼方程**：
+  $$
+  q_\pi(s,a) = \sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma\sum_{a'}\pi(a'\mid s')q_\pi(s',a') \right]\quad \forall s\in\mathcal S, \forall a\in\mathcal A(s)
+  $$
 
-  ​
 
-##### 作业与练习
+##### 最优价值函数：
+
+- **最优状态价值函数$v_*$**：
+  $$
+  v_*(s) \dot= \max_\pi v_\pi(s),\quad \forall s \in \mathcal S
+  $$
+
+- **最优行为价值函数$q_*$**：
+  $$
+  q_*(s,a) \dot= \max_{\pi} q_\pi(s,a)\quad \forall s \in \mathcal S,\forall a\in \mathcal A(s)
+  $$
+
+- **$v_*$最优贝尔曼性方程**：
+  $$
+  v_*(s) = \max_{a\in\mathcal A(s)} \sum_{s',r}p(s',r\mid s,a)\left[ r+\gamma v_*(s') \right]
+  $$
+
+- **$q_*$最优贝尔曼性方程**：
+  $$
+  q_*(s,a) = \sum_{s',r} p(s'r\mid s,a) \left[ r+\gamma\max_{a'}q_*(s',a') \right]
+  $$
+
+
+#### 作业与练习
 
 **练习3.1** 设计三个适用于强化学习框架的任务，确定每一个的状态、任务和激励。使得它们尽可能地不同。
 
@@ -160,7 +187,10 @@ $$
 
 全概率公式：若事件$A_1,\cdots,A_n$构成一个完备事件组，则对任意事件$B$有：
 $$
-P(B) = \sum_{i=1}^n P(A_i)P(B|A_i) \tag{1}
+\begin{eqnarray*}
+P(B) &=& \sum_{i=1}^n P(A_i)P(B\mid A_i) \tag{1}\\
+P(B\mid C) &=& \sum_{i=1}^n P{A_i}P(B\mid C, A_i)
+\end{eqnarray*}
 $$
 若上面的条件中：$C=A_1+\cdots+A_n$，于是有：
 $$
@@ -170,10 +200,11 @@ $$
 $$
 \begin{eqnarray*}
 \mathbb E(X+Y) &=& \mathbb EX + \mathbb EY \tag{3}\\
-E(X\mid y) &=& \sum_{x} x\bullet p(x\mid y) \\
+\mathbb E(X\mid y) &=& \sum_{x} x\bullet p(x\mid y) \\
+\mathbb E(X\mid Y) &=& \sum_x x\bullet p(x\mid Y)
 \end{eqnarray*}
 $$
-模仿$v_\pi$贝尔曼方程的推到过程：
+模仿$v_\pi$贝尔曼方程的推导过程：
 $$
 \begin{eqnarray*}
 v_\pi(s)
@@ -191,10 +222,53 @@ $$
 $$
 \begin{eqnarray*}
 q_\pi(s,a)
-&\dot=& \mathbb E_\pi \left[G_t \mid S_t=s, A_t=a\right] \\
-&=& \mathbb E_\pi \left[ R_{t+1} + \gamma G_{t+1} \mid S_t=s, A_t=a \right] \\
-&=& \mathbb E_\pi \left\{ \sum_{r\in\mathcal R}  \right\}
+&=& \mathbb E_\pi \left[G_t \mid S_t=s, A_t=a\right]\\
+&=& \mathbb E_\pi \left[ R_{t+1} + \gamma G_{t+1} \mid S_t=s, A_t=a \right]\\
+&=& \sum_{s'} p(s'\mid s,a) \mathbb E_\pi \left[ R_{t+1}+\gamma G_{t+1} \mid S_t=s, A_t=a, S_{t+1}=s' \right]\tag{1}\\
+&=& \sum_{s'} p(s'\mid s,a) 
+\end{eqnarray*}
+$$
+
+**练习3.12**：贝尔曼方程必定对图3.5右边的价值函数$v_\pi$的每个状态都成立。以中心价值为0.7的状态为例，用数值展示对应于四个价值为+2.3、+0.4、-0.4、+0.7的临近状态，这个方程成立（数值仅精确到小数点后一位）。
+
+**练习3.13**：在网格世界案例中，目标的激励为正值，碰到世界边缘为负值，其余为0。这些符号是否重要，还是仅是它们的间隔？用(3.2)证明：给所有的激励加上常数$c$，会给所有状态的价值加上一个常数$v_c$，因此并不影响任意策略下任意状态间的相对关系。写出$v_c$关于$c$和$\gamma$的表达。
+
+**练习3.14**：考虑给一个迷宫逃离这样的分节任务的所有激励都加上一个常数$c$带来的影响。举例说明原因。
+
+**练习3.15**：状态的价值取决于此状态下可能的行为以及当前策略下采取每种行为的可能性。可以用根节点为状态的小型备份树并考虑每种可能行为来看待这个问题：
+
+<img src="note3_pics/backup-gram-s.png", width="500px", text-align="middle" >
+
+给出根节点上状态对应这种直觉和图表的价值$v_\pi(s)$关于给定状态$S_t=s$期望叶子结点的价值$q_\pi(s,a)$的方程，应该包含一个以遵循策略$\pi$为条件的期望。然后再给出一个期望价值明确关于$\pi(a\mid s)$故无期望价值符号出现的方程。
+$$
+\begin{eqnarray*}
+v_\pi(s)
+&=& \mathbb E_\pi[G_t\mid S_t=s] \\
+&=& \sum_a 
 \end{eqnarray*}
 $$
 
 
+**练习3.16**：行为的价值$q_\pi(s,a)$依赖于期望激励和剩余激励和的期望。同样以小型备份图看待，根节点为行为（状态-行为），分支为可能的下个状态：
+
+<img src="note3_pics/backup-gram-a.png", width="425px", text-align="middle" >
+
+对应这个直觉和图表，给出行为价值在给定$S_t=s,A_t=a$时$q_\pi(s,a)$关于期望激励$R_{t+1}$，以及下个状态的期望价值$v_\pi(S_{t+1})$的方程，应该包含一个并非以以遵循策略为条件为条件的期望。然后再给出一个期望价值确定关于(3.8)定义的$p(s',r\mid s,a)$的方程，因此没有期望价值符号出现。
+
+**练习3.17**：给出高尔夫示例的最优状态-价值函数。
+
+**练习3.18**：给出高尔夫例子putting的最优行为-价值函数$q_*(s,\mathtt{putter})$的等高线。
+
+**练习3.19**：给出回收机器人的$q_*$的贝尔曼方程。
+
+**练习3.20**：图3.8给出了网格世界最佳状态的最优价值为保留小数点后一位的24.4，使用最优策略和(3.2)的知识用符号表示这个值并保留小数点后面三位。
+
+**练习3.21**：考虑下图展示的连续MDP，唯一要做的决策是在顶部状态，有$\mathtt{left}$和$\mathtt{right}$两种行为，数字展示了每个行为确定的激励，恰有两种确定的策略$\pi_{\mathtt{left}}$和$\pi_{\mathtt{right}}$。在$\gamma$分别为0，0.5，0.9时，对应的优策略分别是什么？
+
+**练习3.22**：给出$v_*$关于$q_*$的一个方程。
+
+**练习3.23**：给出$q_*$关于$v_*$的一个方程，以及世界的动态$p(s',r\mid s,a)$。
+
+**练习3.24**：给出$\pi_*$关于$q_*$的一个方程。
+
+**练习3.25**：给出$\pi_*$关于$\pi_*$的一个方程，以及世界的动态$p(s',r\mid s,a)$。
