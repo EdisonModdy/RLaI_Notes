@@ -37,7 +37,7 @@ $$
 
 - **策略$\pi$的状态-价值函数**，用于评估状态的好坏：
   $$
-  v_{\pi}(s) \dot=\mathbb E_{\pi}[G_t | S_t=s] = \mathbb E \left[ \sum_{k=0}^\infty \gamma^kR_{t+k+1} \middle| S_t=s \right]
+  v_{\pi}(s) \dot=\mathbb E_{\pi}[G_t | S_t=s] = \mathbb E_\pi \left[ \sum_{k=0}^\infty \gamma^kR_{t+k+1} \middle| S_t=s \right]
   $$
 
 - **策略$\pi$的行为-价值函数**：用于评估某状态下某行为的好坏：
@@ -54,6 +54,15 @@ $$
   $$
   q_\pi(s,a) = \sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma\sum_{a'}\pi(a'\mid s')q_\pi(s',a') \right]\quad \forall s\in\mathcal S, \forall a\in\mathcal A(s)
   $$
+
+- **$v_\pi$与$q_\pi$的关系**：
+  $$
+  \begin{eqnarray*}
+  v_\pi(s) &=& \sum_a \pi(a\mid s) q_\pi(s,a)\\
+  q_\pi(s,a) &=& \sum_{s',r}p(s',r\mid s,a)\left(r+\gamma v_\pi(s')\right)
+  \end{eqnarray*}
+  $$
+
 
 
 ##### 最优价值函数：
@@ -77,6 +86,15 @@ $$
   $$
   q_*(s,a) = \sum_{s',r} p(s'r\mid s,a) \left[ r+\gamma\max_{a'}q_*(s',a') \right]
   $$
+
+- $v_*$与$q_*$的关系：
+  $$
+  \begin{eqnarray*}
+  v_*(s) &=& \max_a q_*(s,a)\\
+  q_*(s,a)v&=& \sum_{s',r}p(s',r\mid s,a)\left[ r+\gamma\max_{a'}q_*(s',a') \right]
+  \end{eqnarray*}
+  $$
+
 
 
 #### 作业与练习
@@ -224,14 +242,41 @@ $$
 q_\pi(s,a)
 &=& \mathbb E_\pi \left[G_t \mid S_t=s, A_t=a\right]\\
 &=& \mathbb E_\pi \left[ R_{t+1} + \gamma G_{t+1} \mid S_t=s, A_t=a \right]\\
-&=& \sum_{s'} p(s'\mid s,a) \mathbb E_\pi \left[ R_{t+1}+\gamma G_{t+1} \mid S_t=s, A_t=a, S_{t+1}=s' \right]\tag{1}\\
-&=& \sum_{s'} p(s'\mid s,a) 
+&=& \sum_{s',r} p(s',r\mid s,a)\left[ r + \gamma v_\pi(s') \right] \\
+&=& \sum_{s',r} p(s',r\mid s,a) \left[ r + \gamma\sum_{a'}\pi(a'\mid s')q_\pi(s',a,) \right]\\
 \end{eqnarray*}
 $$
 
 **练习3.12**：贝尔曼方程必定对图3.5右边的价值函数$v_\pi$的每个状态都成立。以中心价值为0.7的状态为例，用数值展示对应于四个价值为+2.3、+0.4、-0.4、+0.7的临近状态，这个方程成立（数值仅精确到小数点后一位）。
 
+由贝尔曼方程：
+$$
+v_\pi(s) = \sum_a\pi(a\mid s)\sum_{s',r} p(s',r\mid s,a)\left[ r+\gamma v_\pi(s') \right]
+$$
+本题中，$\pi=\text{stochastic}$，设中心为$\mathtt{center}$，相应四个后继状态集为$\mathcal S={\mathtt{cleft,cright,cup,cdown}}$，因此有：
+$$
+\begin{aligned}
+&v_\text{stochastic}(\mathtt{center}) = 0.7\\
+&\sum_{a\in \mathcal A(\mathtt{center})} \text{stochastic}(a\mid s)\sum_{s',r}p(s',r\mid s,a)\left[ r+\gamma v_{\text{schostic}}(s') \right]\\
+&=0.25\times0.9\times \left[ 2.3+0.4-0.4+0.7 \right]\\
+&=0.675 \approx0.7
+\end{aligned}
+$$
+因此在中心状态是满足贝尔曼方程的。
+
 **练习3.13**：在网格世界案例中，目标的激励为正值，碰到世界边缘为负值，其余为0。这些符号是否重要，还是仅是它们的间隔？用(3.2)证明：给所有的激励加上常数$c$，会给所有状态的价值加上一个常数$v_c$，因此并不影响任意策略下任意状态间的相对关系。写出$v_c$关于$c$和$\gamma$的表达。
+
+对$\forall s \in \mathcal S$:
+$$
+\begin{aligned}
+v_{\pi+c}(s)
+&= \mathbb E_{\pi}\left[ G_t\mid S_t=s \right]\\
+&= \mathbb E_\pi\left[ G_t+c\mid S_t=s \right]\\
+&= \mathbb E\pi\left[ G_t \mid S_t=s \right] + c\\
+&= v_\pi(s) + c
+\end{aligned}
+$$
+因此并不影响任意策略下任意状态间的相对关系。其中$v_c=c$。
 
 **练习3.14**：考虑给一个迷宫逃离这样的分节任务的所有激励都加上一个常数$c$带来的影响。举例说明原因。
 
@@ -244,17 +289,27 @@ $$
 \begin{eqnarray*}
 v_\pi(s)
 &=& \mathbb E_\pi[G_t\mid S_t=s] \\
-&=& \sum_a 
+&=& \sum_a \pi(a\mid s)\mathbb E[G_t\mid S_t=s,A_t=a]\\
+&=& \sum_a \pi(s\mid s)q_\pi(s,a)\\
 \end{eqnarray*}
 $$
 
 
-**练习3.16**：行为的价值$q_\pi(s,a)$依赖于期望激励和剩余激励和的期望。同样以小型备份图看待，根节点为行为（状态-行为），分支为可能的下个状态：
+**练习3.16**：行为的价值$q_\pi(s,a)​$依赖于期望激励和剩余激励和的期望。同样以小型备份图看待，根节点为行为（状态-行为），分支为可能的下个状态：
 
 <img src="note3_pics/backup-gram-a.png", width="425px", text-align="middle" >
 
 对应这个直觉和图表，给出行为价值在给定$S_t=s,A_t=a$时$q_\pi(s,a)$关于期望激励$R_{t+1}$，以及下个状态的期望价值$v_\pi(S_{t+1})$的方程，应该包含一个并非以以遵循策略为条件为条件的期望。然后再给出一个期望价值确定关于(3.8)定义的$p(s',r\mid s,a)$的方程，因此没有期望价值符号出现。
-
+$$
+\begin{eqnarray*}
+q_\pi(s,a)
+&=& \mathbb E[G_t\mid S_t=s, A_t=a]\\
+&=& \sum_{s',r} p(s',r\mid s,a)\mathbb E\left[ R_{t+1}+\gamma G_{t+1} \mid S_t=s,A_t=a \right]\\
+&=& \sum_{s',r} p(s',r\mid s,a)\left\{ \mathbb ER_{t+1} + \gamma\mathbb E[G_{t+1}\mid S_t=s, A_t=a] \right\}\\
+&=& \sum_{s',r} p(s',r\mid s,a)\left\{ \mathbb ER_{t+1} +  \gamma v_\pi(S_{t+1})\right\}\\
+&=& \sum_{s',r} p(s',r\mid s,a)\left[ r+\gamma v_\pi(s') \right]
+\end{eqnarray*}
+$$
 **练习3.17**：给出高尔夫示例的最优状态-价值函数。
 
 **练习3.18**：给出高尔夫例子putting的最优行为-价值函数$q_*(s,\mathtt{putter})$的等高线。
