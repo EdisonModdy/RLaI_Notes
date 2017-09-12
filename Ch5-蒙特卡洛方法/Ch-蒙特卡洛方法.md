@@ -124,3 +124,64 @@ $$
 
 <img src="note5_pics/blackjack_optimal.png" width="900px" text-align="middle" />
 
+
+
+##### 5.4 无探索启动的蒙特卡洛控制
+
+下面考虑避免不切实际的探索启动假设。保证所有行为无穷次被选中的唯一通用方法就是代理持续选择它们。有两种方法来保证这个，导致了称之为**依附策略(on-policy)**方法和**脱离策略(off-policy)**方法。依附策略方法试着评估和改善用于决策的策略，而脱离策略方法则评估和改善一个不同于产生这些数据的策略。MCES是一种依附策略方法，这里展示一个依附策略的MC控制方法如何设计来避免不现实的探索启动假设。
+
+在依附策略方法中，策略通常是**松弛的(soft)**，意味着对所有$s \in \mathcal S$和所有$a\in\mathcal A(s)$，都有$\pi(a\mid s)>0$，但逐渐向一个确定性的最优策略，本节展示的依附策略方法使用**$\varepsilon$-贪婪**策略，意味着大多数时间选择具有最大价值的行为，但以$\varepsilon$的概率随机选择行为，也即给定选择所有非贪婪行为的最小概率是$\frac{\varepsilon}{\left\vert \mathcal A(s) \right\vert}$，大量的剩余概率$1-\varepsilon+\frac{\varepsilon}{\left\vert \mathcal A(s) \right\vert}$给到最优行为。$\varepsilon$-贪婪是定义为对某个大于0的$\varepsilon$所有策略和行为满足$\pi(a\mid s)\ge\frac{\varepsilon}{\left\vert \mathcal A(s) \right\vert}$的**$\varepsilon$-松弛**策略的例子，也是在某种意义上最接近贪婪的。
+
+策略依附MC控制的整体思想依然是GPI的，就像在MCES中，使用首访MC方法来评估当前策略的行为价值函数。然而没有探索启动的假设，无法简单地通过使策略关于当前行为价值贪婪来改善它，因其会阻碍对非贪婪行为更深的探索。好在GPI并不要求采取的策略一直是贪婪的，仅是移向贪婪策略。在这个策略依附方法中仅移向一个$\varepsilon$-贪婪策略。对任意$\varepsilon$-松弛策略$\pi$，任何关于$q_\pi$的$\varepsilon$-贪婪策略都保证更优于或等优于$\pi$，完整的算法如下：
+$$
+\bbox[5px,border:2px solid]
+{\begin{aligned}
+  &\text{Initialize, for all }s\in\mathcal S, a\in\mathcal A(s)\\
+  &\qquad Q(s,a) \leftarrow \text{arbitrary}\\
+  &\qquad Returns(s,a) \leftarrow \text{empty list}\\
+    &\qquad \pi(a\mid s) \leftarrow \text{an arbitrary }\varepsilon\text{-soft policy}\\
+  \\
+  &\text{Repeat forever:}\\
+  &\qquad \text{(a) Generate an episode using }\pi\\
+  &\qquad \text{(b) For each pair s,a appearing in the episode:}\\
+  &\qquad\qquad G \leftarrow \text{return following the first occurrence of }s,a\\
+  &\qquad\qquad \text{Append }G\text{ to }Returns(s,a)\\
+  &\qquad\qquad Q(s,a) \leftarrow \text{average}(Returns(s,a))\\
+  &\qquad \text{For each }s\text{ in the episode:}\\
+  &\qquad\qquad A^* \leftarrow \arg\max_a Q(s,a)\\
+  &\qquad\qquad \text{For all }a\in\mathcal A(s)\text{:}\\
+  &\qquad\qquad\qquad \pi(a\mid s) \leftarrow 
+  \begin{cases}
+  1-\varepsilon+\varepsilon/\left\vert \mathcal A(s) \right\vert,&\text{ if }a=A^*\\
+  \varepsilon/\left\vert \mathcal A(s) \right\vert, &\text{ if }a\neq A^*
+  \end{cases}
+\end{aligned}}
+$$
+策略改善定理保证了任何关于$q_\pi$的$\varepsilon$-贪婪策略都是任意$\varepsilon$-松弛策略$\pi$的改善。令$\pi'$为$\varepsilon$-贪婪策略，适用策略改善定理的条件因对任意$s\in\mathcal S$：
+$$
+\begin{eqnarray*}
+q_\pi(s,\pi'(s))
+&=& \sum_a \pi'(a\mid s) q_\pi(s,a)\\
+&=& \frac\varepsilon{\mathcal A(s)} \sum_aq_\pi(s,a) + (1-\varepsilon)\max_aq_\pi(s,a)\tag{5.2}\\
+&\ge& \frac\varepsilon{\mathcal A(s)} \sum_aq_\pi(s,a) + (1-\varepsilon)\sum_a\frac{\pi(a\mid s)-\frac\varepsilon{\left\vert\mathcal A(s)\right\vert}}{1-\varepsilon}q_\pi(s,a)\\
+&=& \frac\varepsilon{\mathcal A(s)} \sum_aq_\pi(s,a) - \frac\varepsilon{\mathcal A(s)} \sum_aq_\pi(s,a) + \sum_a\pi(a\mid s)q_\pi(s,a)\\
+&=& v_\pi(s)
+\end{eqnarray*}
+$$
+第三步的和是和为1的非负权重的加权平均，必小于或等于第二步中最大数的平均。由策略改善定理，$\pi'\ge\pi$，也即$\pi'(s)\ge\pi(s), \forall s \in \mathcal S$。现在证明仅当$\pi'$和$\pi$都为$\varepsilon$松弛策略中的最优策略时等号才成立，也即更优或等优于所有其他$\varepsilon$-松弛策略。考虑一个除了要求策略是在环境内移动且$\varepsilon$-松弛的其余都与原环境相同的新环境，有与原始环境同样的行为和状态集并按如下这样运转：若在状态$s$并采取行为$a$，则新环境以$1-\varepsilon$的概率与原环境行为相同，以$\varepsilon$的概率重新等概率随机选择行为，然后以这个新的随机行为像原环境一样运转。在新环境中用一般策略能做到的最好与在原环境中用$\varepsilon$-贪婪策略能做到的最好相同。令$tilde v_*$和$\tilde q_*$表示新环境的最优价值函数。则当且仅当$v_\pi=\tilde v_*$时，$\varepsilon$-松弛中策略$\pi$也是最优的。由$\tilde v_*$的定义知，它是
+$$
+\begin{aligned}
+\tilde v_*(s)
+&= (1-\varepsilon)\max_a\tilde q_*(s,a) + \frac{\varepsilon}{\left\vert\mathcal A(s)\right\vert}\sum_a\tilde q_*(s,a)\\
+&= (1-\varepsilon)\max_a\sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma\tilde v_*(s') \right] + \frac{\varepsilon}{\left\vert\mathcal A(s)\right\vert}\sum_a\sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma\tilde v_*(s') \right]
+\end{aligned}
+$$
+当等式成立并且$\varepsilon$-松弛策略无法再改进时，由(5.2)知
+$$
+\begin{aligned}
+v_\pi(s)
+&= (1-\varepsilon)\max_a q_\pi(s,a) + \frac{\varepsilon}{\left\vert\mathcal A(s)\right\vert}\sum_a q_\pi(s,a)\\
+&= (1-\varepsilon)\max_a\sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma\ v_\pi(s') \right] + \frac{\varepsilon}{\left\vert\mathcal A(s)\right\vert}\sum_a\sum_{s',r}p(s',r\mid s,a) \left[ r + \gamma v_\pi(s') \right]
+\end{aligned}
+$$
+这个方程与前面的相同，除了将$\tilde v_*$替换为$v_\pi$。因$\tilde v_*$是唯一解，因此必有$v_\pi=\tilde v_*$。本质上，上面一些内容展示了策略迭代对$\varepsilon$-松弛策略也有效。$\varepsilon$松弛策略的贪婪的自然概念保证了每一步的改善，除非已经找到$\varepsilon$-松弛策略中的最佳策略。这个分析未提到每个阶段行为-价值函数确定的方法，但可以假定能直接计算。这样就到达了与前一章节大约相同的点，获得了$\varepsilon$-松弛策略中的最佳策略，但另一方面也消除了探索启动的假设。
