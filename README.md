@@ -1,4 +1,4 @@
-这是我学习 *[Reinforcement Learning: an Introduction](http://www.incompleteideas.net/sutton/book/bookdraft2017june19.pdf)*的笔记，包含每章的笔记、作业和（如果需要）的程序。希望笔记是能够在10月1号前完成0.1版。
+这是我学习 **[Reinforcement Learning: an Introduction](http://www.incompleteideas.net/sutton/book/bookdraft2017june19.pdf)**的笔记，包含每章的笔记、作业和（如果需要）的程序。希望笔记是能够在10月1号前完成0.1版。
 
 笔记和习题用typora的markdown编辑器编辑，由于github不支持mathjax，因此若需要阅读建议下载typora。
 
