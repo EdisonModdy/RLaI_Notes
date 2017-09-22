@@ -399,7 +399,7 @@ $$
 $$
 称这个想法为**每个激励(per-reward)的重要性采样**，使用$\tilde G_t$，它即刻满足存在一个代替的重要性采样估算，与(5.4)的OSI估算有相同的非偏期望而能期望有时有更低的方差：
 $$
-V(s) \dot= \frac{\sum_{t\in\mathcal T(s)}\tilde G_t}{\left\vert.\mathcal T(s) \right\vert} \tag{5.11}
+V(s) \dot= \frac{\sum_{t\in\mathcal T(s)}\tilde G_t}{\left\vert\mathcal T(s) \right\vert} \tag{5.11}
 $$
 
 
@@ -426,4 +426,3 @@ $$
 
 
 ##### 5.11 总结
-
