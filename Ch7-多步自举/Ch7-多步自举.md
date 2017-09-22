@@ -200,3 +200,103 @@ $$
 对一个传统𝑛-步方法，与(7.10)结合使用的学习规则是𝑛-步TD更新(7.2)，除了嵌入在𝐺中，没有明确的重要性采样率。这种情况下，近似价值函数在时间索引上有ℎ-1=𝑡+𝑛-1。
 
 **练习7.4**：写出off-policy状态-价值预测的伪代码。
+
+对行动价值，𝑛-步回报的定义对应于期望Sarsa，有一点不同是因为第一个行动在重要性采样中不发挥作用。我们学习这个行动的价值并且在目标策略下不可能发生也没关系。它已被采用，现在满单元的权重必须给到激励和跟随它的状态。重要性采样仅会应用到它后面的行动。行动价值𝑛-步回报的递归定义为，对满足𝑡<ℎ≤𝑇的𝑡, ℎ：
+$$
+G_{t:h} \dot= R_{t+1} + \gamma(\rho_{t+1}G_{t+1:h} + (1-\rho_{t-1})\bar Q_{t+1})\tag{7.11}
+$$
+其中$G_{t:t} \dot= \bar Q_t \dot= \sum_a \pi(a\mid S_t)Q_{t-1}(S_t, a)$。完整的𝑛-步off-policy行为-价值函数预测方法可以使用时间ℎ-1=𝑡+𝑛-1的估计来结合(7.11)和(7.5)。
+
+**练习7.5**：写出off-policy的行动-价值预测算法的伪代码。
+
+**练习7.6**：展示一般(off-policy)版的𝑛-步回报(7.10)依然可以准确紧凑地写为基于状态TD误差(6.5)的和，只要近似状态价值函数不变化。
+
+**练习7.7**：用off-policy 𝑛-步回报(7.11)和期望Sarsa TD误差（方程6.9括弧内的值）重复上面的练习。
+
+**练习7.8（编程）**：设计一个小型off-policy预测问题并用它展示使用(7.10)和(7.2)的off-policy学习算法比使用(7.1)和(7.7)简单算法的数据效率更高。
+
+重要性采样使得off-policy学习得以实现，但增加了更新的方差。高方差迫使使用小步长参数，导致学习很慢。off-policy的训练慢于on-policy的训练很可能是无法避免的，毕竟数据与正在尝试学习的更不相关。但是也有一些方法改善，一种可能是快速调整步长到观测到的方差，就像Autostep方法；另一个很有前途的方法是不变更新。
+
+
+
+##### 7.5 无重要性采样的off-policy学习：𝑛-步树备份算法
+
+本节介绍一个不使用重要性采样的学习方法。第6章的Q-学习和期望Sarsa是一步情形，本节展示𝑛-步的方法，称为**树备份算法(tree-backup algorithm)**。算法的思想如下图所显示，中心线向下在图上标出的是三个样本状态和激励，以及两个样本行动，表示初始状态-行动对$S_t,A_t$后发生事件的随机变量。每个状态的两侧是未选择的行动（认为最后一个状态的所有行动都还未被选择）。因为没有未选中行动样本数据，引导并使用它们值的估计来形成更新的目标。这略微扩展了备份图的思想。目前为止我们总是结合沿途的激励（适当折扣）和底部节点的估计价值向一个目标更新并评估图表顶部节点的价值。在树备份中，目标包含所有这些加上所有层次悬在侧边摇摆行动节点价值的估计。
+
+<img src="note7_pics/tree_backup.png" width="100px" text-align="middle" />
+
+更精确地说，这个备份从树叶子节点估计的行动价值开始，对应采取行为的内部的行动节点则不参与。每个叶子节点用于以正比于目标策略𝜋下发生概率的权值促成目标。因此第一层的一个行动𝑎以权值$\pi(a\mid S_{t+1})$贡献，除实际采取的行为$A_{t+1}$未做人和贡献，它的概率$\pi(A_{t+1}\mid S_{t+1})$用于加权第二层的行动。因此每个未选中第二层行动𝑎'以权值$\pi(A_{t+1}\mid S_{t+1})\pi(a'\mid S_{t+2})$贡献，每个第三层行动贡献的权值是$\pi(A_{t+1}\mid S_{t+1})\pi(A_{t+2}\mid S_{t+2})\pi(a''\mid S_{t+3})$，等等。就好像图中到行动的每个箭头都由此行动在目标策略下被选中的概率加权，而权值不仅适用于此行动，还有它下面的整棵树。
+
+可以将树备份是为样本转移（从每个行动到随后状态）和全备份（从每个状态考虑所有可能的行动和它们发生的概率）的交替序列。样本转移也有多种发生的概率，但因为它们已经给定行为选择因此独立于策略，所以无需考虑这些；它们会引入方差而非偏差。
+
+树备份算法的单步回报（目标）与期望Sarsa的相同，可以写为：
+$$
+\begin{aligned}
+G_{t:t+1} &\dot= R_{t+1} + \gamma\sum_a\pi(a\mid S_{t+1})Q_t(S_{t+1}, a)\\
+&= \delta_t' + Q_{t-1}(S_t,A_t)
+\end{aligned}
+$$
+其中$\delta_t'$是期望Sarsa中TD误差的修改形式：
+$$
+\delta_t' \dot= R_{t+1} + \gamma\sum_a\pi(a\mid S_{t+1})Q_t(S_{t+1},a) - Q_{t-1}(S_t,A_t)\tag{7.12}
+$$
+由这些，树备份算法的一般𝑛-步回报可以定义为递归形式，然后就像TD误差之和：
+$$
+\begin{eqnarray*}
+G_{t:t+n}
+&\dot=& R_{t+1} + \gamma\sum_{a\neq A_{t+1}} \pi(a\mid S_{t+1})Q_t(S_{t+1},a) + \gamma\pi(A_{t+1}\mid S_{t+1})G_{t+1:t+n}\tag{7.13}\\
+&=& \delta_t' + Q_{t-1}(S_t,A_t) - \gamma\pi(A_{t+1}\mid S_{t+1})Q_t(S_{t+1},A_{t+1}) + \gamma\pi(A_{t+1}\mid S_{t+1})G_{t+1:t+n}\\
+&=& Q_{t-1}(S_t,A_t) + \delta_t' + \gamma\pi(A_{t+1}\mid S_{t+1})\left( G_{t+1:t+n} - Q_t(S_{t+1},A_{t+1}) \right)\\
+&=& Q_{t-1}(S_t,A_t) + \delta_t' + \gamma\pi(A_{t+1}\mid S_{t+1})\delta_{t=1}' + \gamma^2\pi(A_{t+1}\mid S_{t+1})\pi(A_{t+2}\mid S_{t+2})\delta_{t+2}'+ \cdots\\
+&=& Q_{t-1}(S_t,A_t) + \sum_{k=t}^{\min(t+n-1, T-1)} \delta_k' \prod_{i=t+1}^k \gamma\pi(A_i\mid S_i)
+\end{eqnarray*}
+$$
+惯例下0个元素的累积为1。此目标然后与𝑛-步Sarsa的行动-价值更新规则一起使用：
+$$
+Q_{t+n}(S_t, A_t) \dot= Q_{t+n-1}(S_t, A_t) + \alpha[G_{t:t+n} - Q_{t+n-1}(S_t,A_t)] \tag{7.5}
+$$
+而所有其他状态-行动的价值保持不变，对$\forall s,a$满足$s\neq S_t \text{ or } a\neq A_t$，有$Q_{t+n}(s,a)=Q_{t+n-1}(s,a)$。算法的伪代码如下：
+$$
+\bbox[5px,border:2px solid]
+{\begin{aligned}
+  &\underline{\mathbf{n\text-step\ Tree\ Backup\ for\ estimating\ }Q\approx q_*,\mathbf{\ or\ }Q\approx q_\pi\ \mathbf{for\ a\ given\ }\pi}\\
+  \\
+  &\text{Initialize }Q(s,a)\text{ arbitrarily },\forall s\in\mathcal S,\ a\in\mathcal A\\
+  &\text{Initialize }\pi\text{ to be }\varepsilon\text{-greedy with respect to }Q,\text{ or to a fixed given policy}\\
+  &\text{Parameters: step size }\alpha\in(0,1],\text{ small }\varepsilon>0,\ \text{ a positive integer n}\\
+  &\text{All store and access operations can take their index mod n}\\
+  \\
+  &\text{Repeat (for each episode):}\\
+  &\qquad \text{Initialize and store }S_0\neq \text{terminal}\\
+  &\qquad \text{Select and store an action }A_0\sim \pi(\bullet\mid S_0)\\
+  &\qquad \text{Store }Q(S_0,A_0)\text{ as }Q_0\\
+  &\qquad T \leftarrow \infty\\
+  &\qquad \text{For }t=0,1,2,\dots\text{:}\\
+  &\qquad|\qquad\text{if }t < T,\text{ then:}\\
+  &\qquad|\qquad\qquad \text{Take action }A_t\\
+  &\qquad|\qquad\qquad \text{Observe the next reward as }R\text{; Observe and store the next state as }S_{t+1}\\
+  &\qquad|\qquad\qquad \text{If }S_{t+1}\text{ is terminal, then:}\\
+  &\qquad|\qquad\qquad\qquad T \leftarrow t+1\\
+  &\qquad|\qquad\qquad\qquad \text{Store }R-Q_t\text{ as }\delta_t\\
+  &\qquad|\qquad\qquad \text{else:}\\
+  &\qquad|\qquad\qquad\qquad \text{Store }R+\gamma\sum_a\pi(a\mid S_{t+1})Q(S_{t+1},a)-Q_t\text{ as }\delta_t\\
+  &\qquad|\qquad\qquad\qquad \text{Select arbitratily and store an action as }A_{t+1}\\
+  &\qquad| \qquad\qquad\qquad \text{Store }Q(S_{t+1},A_{t+1})\text{ as }Q_{t+1}\\
+  &\qquad| \qquad\qquad\qquad \text{Store }\pi(S_{t+1},A_{t+1})\text{ as }\pi_{t+1}\\
+  &\qquad|\qquad \tau \leftarrow t-n+1\quad(\tau\text{ is the time whose states's estimate is being updated})\\
+  &\qquad|\qquad\text{if }\tau\ge0\text{:}\\
+  &\qquad|\qquad\qquad \mathbf e\leftarrow 1\\
+  &\qquad|\qquad\qquad G\leftarrow Q_\tau\\
+  &\qquad|\qquad\qquad \text{For }k=\tau,\cdots,\min(\tau+n-1,T-1)\text{:}\\
+  &\qquad|\qquad\qquad\qquad G\leftarrow G+\mathbf e\delta_k\\
+  &\qquad|\qquad\qquad\qquad \mathbf e\leftarrow\gamma\mathbf e\pi_{k+1}\\
+  &\qquad|\qquad\qquad Q(S_\tau,A_\tau) \leftarrow Q(S_\tau,A_\tau) + \alpha[G - Q(S_\tau, A_\tau)]\\
+  &\qquad|\qquad\qquad \text{If }\pi\text{ is being learned, then ensure that }\pi(a\mid S_\tau)\text{ is }\varepsilon\text{-greedy wrt }Q(S_\tau,\bullet)\\
+  &\qquad \text{Until }\tau=T-1
+\end{aligned}}
+$$
+
+##### \*统一算法：𝑛-步𝑄(𝜎)
+
+
+
