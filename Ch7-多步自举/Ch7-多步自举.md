@@ -296,7 +296,98 @@ $$
 \end{aligned}}
 $$
 
-##### \*统一算法：𝑛-步𝑄(𝜎)
 
+##### 7.6 \*统一算法：𝑛-步𝑄(𝜎)
 
+目前本章已经介绍了三种不同的行动-价值备份，分别对应于图7.5展示的前3个备份图。𝑛-步Sarsa有所有采样的转移；树备份算法有所有状态到行动全部分支而非采样的转移；而𝑛-步期望备份有所有采样转移，除最后的状态到行动转移是在所有分支上的期望值。将它们统一起来的一个思修是图7.5的第4个备份图，就是在逐步基础上决定是否要像Sarsa中那样采取行动为样本，或者考虑用树备份中那样的所有行动上的期望来替代。然后，如果选择总是采样，就获得了Sarsa；而若选择绝不采样，则获得了树备份算法。期望Sarsa就是除最后一个外都选择采样的情形。当然还有很多其他可能性，就像图中最后的图表所示。为进一步提高概率，可以可以考虑一个在采样和期望中的连续变体。令$\sigma_t\in[0,1]$表示在时间𝑡采样的程度。其中𝜎=1表示完全采样，而𝜎=0表示纯期望。随机变量$\sigma_t$可以设置为状态、行动、或状态-行动对的函数。称这个新提出的算法为**𝑛-步𝑄(𝜎)**。
 
+<img src="note7_pics/backup_trees.png" width="750px" text-align="middle" />
+
+现在建立𝑛-步𝑄(𝜎)的方程。首先留意到Sarsa(7.4)的𝑛-步回报可以写成依据其本身基于纯样本的TD误差：
+$$
+G_{t:t+n} = Q_{t-1}(S_t,A_t) + \sum_{k=t}^{\min(t+n-1,T-1)}\gamma^{k-t}[R_{k+1}+\gamma Q_k(S_{k+1}, A_{k+1})-Q_{k-1}(S_k,A_k)]
+$$
+这表明如果将TD误差推广到从期望使用$\sigma_t$滑动到其采样形式，我们就能包含这两种情况：
+$$
+\delta_t \dot= R_{t+1} + \gamma[\sigma_{t+1}Q_t(S_{t+1}, A_{t=1})+(1-\sigma_{t+1}\bar Q_{t+1})] - Q_{t-1}(S_t, A_t) \tag{7.14}
+$$
+照例
+$$
+\bar Q_{t} \dot= \sum_a\pi(a\mid S_t)Q_{t-1}(S_t,a) \tag{7.15}
+$$
+使用这些可以将𝑄(𝜎)的回报定义为：
+$$
+\begin{eqnarray*}
+G_{t:t+1}
+&=& R_{t+1} + \gamma[\sigma_{t+1}Q_t(S_{t+1}, A_{t+1}) + (1-\sigma_{t+1})\bar Q_{t+1}]\\
+&=& \delta_t + Q_{t-1}(S_t, A_t)\\
+\\
+G_{t:t+2}&=&
+\begin{aligned}
+& R_{t+1} + \gamma[\sigma_{t+1}Q_t(S_{t+1}, A_{t+1}) + (1-\sigma_{t+1})\bar Q_{t+1}]\\
+& -\gamma(1-\sigma_{t+1})\pi(A_{t+1}\mid S_{t+1})Q(S_{t+1}, A_{t+1})\\
+& +\gamma(1-\sigma_{t+1})\pi(A_{t+1}\mid S_{t+1})[R_{t+2}+\gamma[\sigma_{t+2}Q_t(S_{t+2}, A_{t+2})+(1-\sigma_{t+2})\bar Q_{t+2}]]\\
+& -\gamma\sigma_{t+1}Q_t(S_{t+1}, A_{t+1})\\
+& +\gamma\sigma_{t+1}[R_{t+2}+\gamma[\sigma_{t+2}Q_t(S_{t+2}, A_{t+2})+(1-\sigma_{t+2})\bar Q_{t+2}]]
+\end{aligned}\\
+&=&
+\begin{aligned}
+& Q_{t-1}(S_t,A_t) + \delta_t\\
+& + \gamma(1-\sigma_{t+1})\pi(A_{t+1}\mid S_{t+1})\delta_{t+1}\\
+& +\gamma\sigma_{t+1}\delta_{t+1}
+\end{aligned}\\
+&=& Q_{t-1}(S_t,A_t) + \delta_t + \gamma[(1-\sigma_{t+1})\pi(A_{t+1}\mid S_{t+1}) + \sigma_{t+1}]\delta_{t+1}\\
+\\
+G_{t:t+n}
+&=& Q_{t-1}(S_t,A_t) + \sum_{k=t}^{\min(t+n-1, T-1)} \delta_k\prod_{i=t+1}^k \gamma[(1-\sigma_i)\pi(A_i\mid S_i)+\sigma_i] \tag{7.16}
+\end{eqnarray*}
+$$
+在on-policy训练中，此回报已经能像𝑛-步Sarsa(7.5)中那样在更新中使用；对于off-policy的情况，则需要将𝜎考虑进重要性采样率，可以更普遍地定义为：
+$$
+\rho_{t:h} \dot= \prod_{k=t}^{\min(h,T-1)}\left( \sigma_k\frac{\pi(A_k\mid S_k)}{b(A_k\mid S_k)} + 1 -\sigma_k \right)\tag{7.17}
+$$
+这之后就可以对𝑛-步Sarsa(7.9)使用普遍的(off-policy)更新。完整的算法如下：
+$$
+\bbox[5px,border:2px solid]
+{\begin{aligned}
+  &\underline{\mathbf{Off\text-policy\ n\text-step\ Q(\sigma)\ for\ estimating\ }Q\approx q_*,\mathbf{\ or\ }Q\approx q_\pi\ \mathbf{for\ a\ given\ }\pi}\\
+  \\
+  &\text{Input: an arbitrary behavior policy }b\text{ such that},b(a\mid s)>0,\ \forall s\in\mathcal S,\ a\in\mathcal A\\
+  &\text{Initialize }Q(s,a)\text{ arbitrarily },\forall s\in\mathcal S,\ a\in\mathcal A\\
+  &\text{Initialize }\pi\text{ to be }\varepsilon\text{-greedy with respect to }Q,\text{ or to a fixed given policy}\\
+  &\text{Parameters: step size }\alpha\in(0,1],\text{ small }\varepsilon>0,\ \text{ a positive integer n}\\
+  &\text{All store and access operations can take their index mod n}\\
+  \\
+  &\text{Repeat (for each episode):}\\
+  &\qquad \text{Initialize and store }S_0\neq \text{terminal}\\
+  &\qquad \text{Select and store an action }A_0\sim b(\bullet\mid S_0)\\
+  &\qquad \text{Store }Q(S_0,A_0)\text{ as }Q_0\\
+  &\qquad T \leftarrow \infty\\
+  &\qquad \text{For }t=0,1,2,\dots\text{:}\\
+  &\qquad|\qquad\text{if }t < T,\text{ then:}\\
+  &\qquad|\qquad\qquad \text{Take action }A_t\\
+  &\qquad|\qquad\qquad \text{Observe the next reward as }R\text{; Observe and store the next state as }S_{t+1}\\
+  &\qquad|\qquad\qquad \text{If }S_{t+1}\text{ is terminal, then:}\\
+  &\qquad|\qquad\qquad\qquad T \leftarrow t+1\\
+  &\qquad|\qquad\qquad\qquad \text{Store }\delta_t \leftarrow R-Q_t\\
+  &\qquad|\qquad\qquad \text{else:}\\
+  &\qquad|\qquad\qquad\qquad \text{Select and store an action }A_{t+1}\sim b(\bullet\mid S_{t+1})\\
+  &\qquad|\qquad\qquad\qquad \text{Select and store }\sigma_{t+1}\\
+  &\qquad| \qquad\qquad\qquad \text{Store }Q(S_{t+1},A_{t+1})\text{ as }Q_{t+1}\\
+  &\qquad|\qquad\qquad\qquad \text{Store }R+\gamma\sigma_{t+1}Q_{t+1}+\gamma(1-\sigma_{t+1})\sum_a\pi(a\mid S_{t+1})Q(S_{t+1},a)-Q_t\text{ as }\delta_t\\
+  &\qquad| \qquad\qquad\qquad \text{Store }\pi(S_{t+1},A_{t+1})\text{ as }\pi_{t+1}\\
+  &\qquad| \qquad\qquad\qquad \text{Store }\frac{\pi(A_{t+1}\mid S_{t+1})}{b(A_{t+1}\mid S_{t+1})}\text{ as }\rho_{t+1}\\
+  &\qquad|\qquad \tau \leftarrow t-n+1\quad(\tau\text{ is the time whose states's estimate is being updated})\\
+  &\qquad|\qquad\text{if }\tau\ge0\text{:}\\
+  &\qquad|\qquad\qquad \rho \leftarrow 1\\
+  &\qquad|\qquad\qquad \mathbf e\leftarrow 1\\
+  &\qquad|\qquad\qquad G\leftarrow Q_\tau\\
+  &\qquad|\qquad\qquad \text{For }k=\tau,\cdots,\min(\tau+n-1,T-1)\text{:}\\
+  &\qquad|\qquad\qquad\qquad G\leftarrow G+\mathbf e\delta_k\\
+  &\qquad|\qquad\qquad\qquad \mathbf e\leftarrow\gamma\mathbf e[(1-\sigma_{k+1})\pi_{k+1} + \sigma_{k+1}]\\
+  &\qquad|\qquad\qquad\qquad \rho\leftarrow \rho(1-\sigma_k + \sigma_k\rho_k)\\
+  &\qquad|\qquad\qquad Q(S_\tau,A_\tau) \leftarrow Q(S_\tau,A_\tau) + \alpha\rho[G - Q(S_\tau, A_\tau)]\\
+  &\qquad|\qquad\qquad \text{If }\pi\text{ is being learned, then ensure that }\pi(a\mid S_\tau)\text{ is }\varepsilon\text{-greedy wrt }Q(S_\tau,\bullet)\\
+  &\qquad \text{Until }\tau=T-1
+\end{aligned}}
+$$
